@@ -30,7 +30,7 @@ DOCS_DIR = os.path.join(BASE_DIR, "docs")
 PERSIST_DIR = os.path.join(BASE_DIR, "chroma_pdf")
 COLLECTION_NAME = "pdf_docs"
 CHUNK_SIZE = 1200      # caracteres por chunk
-CHUNK_OVERLAP = 200   # solapamiento entre chunks consecutivos
+CHUNK_OVERLAP = 250   # solapamiento entre chunks consecutivos
 
 
 def chunk_text(texto: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
@@ -82,8 +82,9 @@ def build_index() -> chromadb.Collection:
             continue
         for item in items:
             # Cada chunk se convierte en un vector numerico (embedding) via Ollama...
-            embedding = ollama.embeddings(model=EMBED_MODEL, prompt=item["text"])["embedding"]
-            # ...y se guarda en Chroma junto con su texto original, su id unico y de donde salio.
+            embedding = ollama.embeddings(model=EMBED_MODEL, prompt=f"search_document: {item['text']}"
+                )["embedding"]
+                # ...y se guarda en Chroma junto con su texto original, su id unico y de donde salio.
             collection.add(
                 ids=[item["id"]],
                 embeddings=[embedding],
@@ -94,17 +95,33 @@ def build_index() -> chromadb.Collection:
     return collection
 
 
-def retrieve(collection: chromadb.Collection, pregunta: str, k: int = TOP_K) -> list[str]:
-    """Devuelve los k documentos mas parecidos (por embedding) a la pregunta."""
-    query_embedding = ollama.embeddings(model=EMBED_MODEL, prompt=pregunta)["embedding"]
-    resultados = collection.query(query_embeddings=[query_embedding], n_results=k)
-    return resultados["documents"][0]  # [0] porque query() soporta multiples consultas a la vez
+def retrieve(collection: chromadb.Collection, pregunta: str, k: int = TOP_K) -> list[tuple[str, dict]]:
+    """Devuelve los k fragmentos mas parecidos, cada uno con su metadata (archivo y pagina)."""
+    query_embedding = ollama.embeddings(
+        model=EMBED_MODEL, prompt=f"search_query: {pregunta}"
+    )["embedding"]
+    resultados = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=k,
+        include=["documents", "metadatas"],
+    )
+    return list(zip(resultados["documents"][0], resultados["metadatas"][0]))
 
 
-def generar_respuesta(pregunta: str, contexto: list[str]) -> str:
+def generar_respuesta(pregunta: str, contexto: list[tuple[str, dict]]) -> str:
     """Arma un prompt con el contexto recuperado y le pide a Gemma que responda solo con eso."""
-    contexto_str = "\n\n".join(f"- {c}" for c in contexto)
-    prompt = f"""Respondé la pregunta usando SOLO la informacion del contexto. Si el contexto no alcanza, decilo. Podes combinar informacion de distintos documentos, pero no inventes nada. No agregues explicaciones ni comentarios, solo la respuesta concreta. Citá los documentos de donde sacaste la informacion, indicando el nombre del PDF y la pagina.
+    contexto_str = "\n\n".join(
+        f"[{meta['source']} — pág. {meta['page']}]\n{texto}"
+        for texto, meta in contexto
+    )
+    prompt = f"""Respondé la pregunta usando SOLO la información del contexto.
+        Desarrollá la respuesta: explicá el razonamiento y mencioná todos los datos
+        relevantes que encuentres en el contexto, no solo el dato mínimo.
+        Si el contexto no alcanza para una parte, aclaralo para esa parte y respondé
+        igual lo que sí puedas.
+        Cada fragmento del contexto viene precedido por su origen entre corchetes, con
+        el nombre del PDF y el número de página. Citá las referencias al final de la respuesta. 
+        No cites páginas que no aparezcan en el contexto.
 
 Contexto:
 {contexto_str}
@@ -113,7 +130,12 @@ Pregunta: {pregunta}
 
 Respuesta:"""
 
-    response = ollama.chat(model=CHAT_MODEL, messages=[{"role": "user", "content": prompt}])
+    response = ollama.chat(
+        model=CHAT_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        options={"num_ctx": 8192, "temperature": 0.3},
+    )
+    print("DEBUG:", repr(response))
     return response["message"]["content"]
 
 
@@ -122,8 +144,8 @@ def rag(collection: chromadb.Collection, pregunta: str) -> None:
     print(f"\n=== Pregunta: {pregunta} ===")
     contexto = retrieve(collection, pregunta)
     print("\n--- Documentos recuperados ---")
-    for c in contexto:
-        print(f"  * {c[:90]}...")
+    for texto, meta in contexto:
+        print(f"  * [{meta['source']} p.{meta['page']}] {texto[:90]}...")
     respuesta = generar_respuesta(pregunta, contexto)
     print("\n--- Respuesta del modelo ---")
     print(respuesta)
