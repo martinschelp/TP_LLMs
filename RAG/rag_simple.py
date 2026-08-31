@@ -120,7 +120,7 @@ def generar_respuesta(pregunta: str, contexto: list[tuple[str, dict]]) -> str:
         Si el contexto no alcanza para una parte, aclaralo para esa parte y respondé
         igual lo que sí puedas.
         Cada fragmento del contexto viene precedido por su origen entre corchetes, con
-        el nombre del PDF y el número de página. Citá las referencias al final de la respuesta. 
+        el nombre del PDF y el número de página. Citá las referencias una sola vez al final de la respuesta. 
         No cites páginas que no aparezcan en el contexto.
 
 Contexto:
@@ -135,7 +135,6 @@ Respuesta:"""
         messages=[{"role": "user", "content": prompt}],
         options={"num_ctx": 8192, "temperature": 0.3},
     )
-    print("DEBUG:", repr(response))
     return response["message"]["content"]
 
 
