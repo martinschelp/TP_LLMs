@@ -3,7 +3,7 @@ RAG simple 100% local: Ollama (embeddings + generacion) + ChromaDB (vector store
 
 Requisitos previos:
     ollama pull nomic-embed-text   # modelo de embeddings
-    ollama pull gemma3             # modelo generador
+    ollama pull gemma4:12b             # modelo generador
     pip install ollama chromadb
 
 Flujo:
@@ -24,13 +24,13 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 EMBED_MODEL = "nomic-embed-text"
 CHAT_MODEL = "gemma4:12b" # cambia el tag segun lo que tengas descargado (ej: gemma3:1b, gemma2:9b)
-TOP_K = 2
+TOP_K = 8
 BASE_DIR = os.path.dirname(__file__)
 DOCS_DIR = os.path.join(BASE_DIR, "docs")
 PERSIST_DIR = os.path.join(BASE_DIR, "chroma_pdf")
 COLLECTION_NAME = "pdf_docs"
-CHUNK_SIZE = 800      # caracteres por chunk
-CHUNK_OVERLAP = 150   # solapamiento entre chunks consecutivos
+CHUNK_SIZE = 1200      # caracteres por chunk
+CHUNK_OVERLAP = 200   # solapamiento entre chunks consecutivos
 
 
 def chunk_text(texto: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
@@ -104,7 +104,7 @@ def retrieve(collection: chromadb.Collection, pregunta: str, k: int = TOP_K) -> 
 def generar_respuesta(pregunta: str, contexto: list[str]) -> str:
     """Arma un prompt con el contexto recuperado y le pide a Gemma que responda solo con eso."""
     contexto_str = "\n\n".join(f"- {c}" for c in contexto)
-    prompt = f"""Respondé la pregunta usando SOLO la informacion del contexto. Si el contexto no alcanza, decilo.
+    prompt = f"""Respondé la pregunta usando SOLO la informacion del contexto. Si el contexto no alcanza, decilo. Podes combinar informacion de distintos documentos, pero no inventes nada. No agregues explicaciones ni comentarios, solo la respuesta concreta. Citá los documentos de donde sacaste la informacion, indicando el nombre del PDF y la pagina.
 
 Contexto:
 {contexto_str}
