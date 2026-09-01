@@ -491,3 +491,9 @@ Resumen de diferencias según la región:
 Pantera (Leopardo): Común en África y Asia. Es más esbelta y ágil.
 Pantera (Jaguar): Común en América (Centro y Sur). Es más robusta y tiene una mandíbula más fuerte.
 En resumen, la "pantera" es el símbolo de la fuerza, el sigilo y la elegancia en el mundo animal.
+
+## Analisis del Uso y Limitaciónes
+ 
+El RAG permite obtener respuestas mas precisas sobre la informacion que lo proporcionamos de contexto. No necesita que le especifique información redundante como que Panter o Café Crème son marcas de cigarritos y no panteras o cafes con crema. Cuando le pregunto precios responde con precision y no me inventa analisis sin darme una respuesta concreta.
+
+Por otro lado, las limitaciones del modelo son que tarda mucho tiempo en responder: puede tardar 5 minutos para darme una respuesta, o peor aun puede no responder nada. Esto puede deberse a que con preguntas complejas que requieran comparar mucha informacion el modelo utiliza el total de cupo de tokens y no tiene mas disponibles para generar una respuesta. La limitación en definitiva es de hardware por correrlo en local.

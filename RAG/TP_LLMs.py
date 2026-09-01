@@ -35,7 +35,7 @@ COLLECTION_NAME = "pdf_docs"
 CHUNK_SIZE = 1200      # caracteres por chunk
 CHUNK_OVERLAP = 250   # solapamiento entre chunks consecutivos
 
-
+#funcion que parte un texto en fragmentos de `size` caracteres, solapados `overlap` caracteres
 def chunk_text(texto: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     """Parte un texto en fragmentos de `size` caracteres, solapados `overlap` caracteres
     (asi una idea que cae justo en el borde no queda partida al medio)."""
@@ -49,7 +49,7 @@ def chunk_text(texto: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP)
         inicio += size - overlap  # avanza menos que "size": de ahi viene el solapamiento
     return chunks
 
-
+#funcion que extrae el texto de un PDF y lo divide en chunks, devolviendo una lista de diccionarios con id, texto y metadata (archivo y pagina)
 def extraer_chunks_pdf(ruta: str) -> list[dict]:
     """Extrae el texto de un PDF y devuelve una lista de chunks con metadata."""
     reader = PdfReader(ruta)
@@ -65,6 +65,7 @@ def extraer_chunks_pdf(ruta: str) -> list[dict]:
             })
     return items
 
+#funcion que crea la coleccion de Chroma y la llena con los embeddings de los PDFs de docs/
 def build_index() -> chromadb.Collection:
     """Crea (o recrea) la coleccion de Chroma y la llena con los embeddings de los PDFs de docs/."""
     client = chromadb.PersistentClient(path=PERSIST_DIR)  # persiste en disco, no solo en memoria
@@ -97,7 +98,7 @@ def build_index() -> chromadb.Collection:
         print(f"  + {nombre}: {len(items)} chunks indexados")
     return collection
 
-
+# Recupera los k fragmentos mas parecidos a la pregunta, con su metadata (archivo y pagina)
 def retrieve(collection: chromadb.Collection, pregunta: str, k: int = TOP_K) -> list[tuple[str, dict]]:
     """Devuelve los k fragmentos mas parecidos, cada uno con su metadata (archivo y pagina)."""
     query_embedding = ollama.embeddings(
@@ -111,6 +112,7 @@ def retrieve(collection: chromadb.Collection, pregunta: str, k: int = TOP_K) -> 
     return list(zip(resultados["documents"][0], resultados["metadatas"][0]))
 
 
+#funcion de generacion de respuesta, que recibe la pregunta y el contexto recuperado, y llama a Gemma para generar la respuesta
 def generar_respuesta(pregunta: str, contexto: list[tuple[str, dict]]) -> str:
     """Arma un prompt con el contexto recuperado y le pide a Gemma que responda solo con eso."""
     contexto_str = "\n\n".join(
@@ -141,6 +143,7 @@ Respuesta:"""
     return response["message"]["content"]
 
 
+#llama a las funciones de recuperar y generar respuesta, mostrando logs por consola
 def rag(collection: chromadb.Collection, pregunta: str) -> None:
     """Orquesta el flujo completo: recuperar contexto y generar la respuesta, con logs por consola."""
     print(f"\n=== Pregunta: {pregunta} ===")
@@ -152,17 +155,17 @@ def rag(collection: chromadb.Collection, pregunta: str) -> None:
     print("\n--- Respuesta del modelo ---")
     print(respuesta)
 
-
+#main: indexa los PDFs y luego entra en modo interactivo o responde a la pregunta pasada por linea de comandos
 if __name__ == "__main__":
     print("Indexando documentos en ChromaDB...")
     collection = build_index()  # se reindexa siempre al arrancar, es rapido con este corpus chico
     print(f"Listo: {collection.count()} documentos indexados.\n")
 
     if len(sys.argv) > 1:
-        # Uso: python rag_simple.py "¿pregunta libre?"
+        # Uso: python TP_LLM.py "¿pregunta libre?"
         rag(collection, " ".join(sys.argv[1:]))
     else:
-        # Modo interactivo para probar en clase con preguntas de los alumnos.
+        # Modo interactivo.
         print("Escribí una pregunta (o 'salir' para terminar):")
         while True:
             pregunta = input("\n> ").strip()
