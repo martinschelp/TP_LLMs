@@ -18,6 +18,77 @@ Para citar se hace uso de la metadata de los archivos pdf. Se utiliza la metadat
 Despues de evaluar los chunks, el LLM genera una respuesta.
 
 
+## Instrucciones de uso
+
+Todo el proyecto corre 100% en local: no hace falta internet (más allá de bajar los modelos una vez) ni API keys.
+
+### 1. Requisitos previos
+
+- **Python >= 3.10** (probado con 3.12.13).
+- **Ollama** instalado y corriendo: https://ollama.com/download
+
+### 2. Descargar los modelos de Ollama
+
+```bash
+ollama pull nomic-embed-text   # embeddings
+ollama pull gemma4:12b         # generación
+```
+
+El tag del generador tiene que coincidir con la constante `CHAT_MODEL` del script (hoy `gemma4:12b`). Si tenés otro descargado, chequeá cuál con `ollama list` y editá `CHAT_MODEL` en `RAG/TP_LLMs.py` (por ejemplo `gemma3:12b`, `gemma2:9b`, `gemma3:1b`).
+
+### 3. Instalar las dependencias de Python
+
+```bash
+cd RAG
+python3 -m venv .venv
+source .venv/bin/activate        # en Windows: .venv\Scripts\activate
+pip install -r requirements.txt  # ollama, chromadb, pypdf
+```
+
+### 4. Cargar los documentos
+
+Los PDFs van en `RAG/docs/`. Se indexan **todos** los `.pdf` de esa carpeta al arrancar el script. Tienen que ser PDFs con texto seleccionable: si el PDF está escaneado como imagen, no se extrae texto y el script avisa con `! archivo.pdf: sin texto extraible`.
+
+### 5. Correr el RAG
+
+Modo interactivo (se pueden hacer varias preguntas seguidas):
+
+```bash
+python TP_LLMs.py
+```
+
+```
+Indexando documentos en ChromaDB...
+  + FRANCISCO DE MIRANDA.pdf: 12 chunks indexados
+  ...
+Listo: N documentos indexados.
+
+Escribí una pregunta (o 'salir' para terminar):
+> cuanto cuesta un francisco de miranda azul robusto?
+```
+
+Se sale con `salir`, `exit` o `quit`.
+
+Una sola pregunta directo desde la línea de comandos:
+
+```bash
+python TP_LLMs.py "cuanto cuesta un francisco de miranda azul robusto?"
+```
+
+### 6. Qué devuelve
+
+Por cada pregunta la consola muestra:
+
+1. **Documentos recuperados**: los 20 chunks más similares, con el PDF y la página de origen.
+2. **Respuesta del modelo**: la respuesta generada por Gemma, con las referencias citadas al final.
+
+### 7. Notas
+
+- **La base vectorial se reconstruye en cada corrida**: el script borra y recrea la colección `pdf_docs` en `RAG/chroma_pdf/`. Alcanza con volver a correr el script después de agregar o sacar un PDF. Con un corpus chico es rápido; si sumás muchos documentos, la indexación tarda porque genera un embedding por chunk.
+- `RAG/chroma_pdf/` y `RAG/.venv/` están en `.gitignore`, no se versionan.
+- Los parámetros se ajustan en el encabezado de `RAG/TP_LLMs.py`: `TOP_K` (20), `CHUNK_SIZE` (1200), `CHUNK_OVERLAP` (250), y en la llamada a `ollama.chat`: `num_ctx` (16384) y `temperature` (0.3). Si subís `TOP_K` o `CHUNK_SIZE`, revisá que el contexto siga entrando en `num_ctx`.
+- Si el script falla al conectarse, verificá que Ollama esté levantado (`ollama list` tiene que responder).
+
 ## Pregunta 1: cuanto cuesta un francisco de miranda azul robusto?
 
 ### RAG
