@@ -1,10 +1,10 @@
 """
-RAG simple 100% local: Ollama (embeddings + generacion) + ChromaDB (vector store).
+RAG  100% local: Ollama (embeddings + generacion) + ChromaDB (vector store).
 
 Requisitos previos:
     ollama pull nomic-embed-text   # modelo de embeddings
     ollama pull gemma4:12b             # modelo generador
-    pip install ollama chromadb
+    pip install -r requirements.txt   # librerias de Python
 
 Flujo:
     1. Indexar: cada documento se convierte en un vector (embedding) y se guarda en Chroma.
@@ -14,17 +14,20 @@ Flujo:
        contexto, y se lo pasamos a Gemma para que responda basandose en ese contexto.
 """
 
+# Si falta alguna libreria, correr una sola vez:
+#     pip install -r requirements.txt
+
 import os
 import sys
 import chromadb
 import ollama
-from pypdf import PdfReader  # lector de PDFs (pip install pypdf)
-    
+from pypdf import PdfReader  # lector de PDFs
+
 sys.stdout.reconfigure(encoding="utf-8")
 
 EMBED_MODEL = "nomic-embed-text"
 CHAT_MODEL = "gemma4:12b" # cambia el tag segun lo que tengas descargado (ej: gemma3:1b, gemma2:9b)
-TOP_K = 8
+TOP_K = 20 #cantidad de k fragmenos a recuperar
 BASE_DIR = os.path.dirname(__file__)
 DOCS_DIR = os.path.join(BASE_DIR, "docs")
 PERSIST_DIR = os.path.join(BASE_DIR, "chroma_pdf")
@@ -133,7 +136,7 @@ Respuesta:"""
     response = ollama.chat(
         model=CHAT_MODEL,
         messages=[{"role": "user", "content": prompt}],
-        options={"num_ctx": 8192, "temperature": 0.3},
+        options={"num_ctx": 16384, "temperature": 0.3},
     )
     return response["message"]["content"]
 

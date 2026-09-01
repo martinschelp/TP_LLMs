@@ -1,0 +1,17 @@
+# Requisitos de TP_LLMs.py (RAG local con Ollama + ChromaDB)
+#
+# Requiere Python >= 3.10 (se usa la sintaxis list[str] en anotaciones).
+# Probado con Python 3.12.13.
+#
+# Instalacion:
+#     pip install -r requirements.txt
+#
+# Dependencias externas (NO se instalan con pip):
+#     1. Ollama corriendo localmente -> https://ollama.com/download
+#     2. Descargar los modelos:
+#            ollama pull nomic-embed-text   # embeddings
+#            ollama pull gemma3:12b         # generacion (ajustar CHAT_MODEL segun el tag descargado)
+
+ollama==0.6.2
+chromadb==1.5.9
+pypdf==6.15.0
