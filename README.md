@@ -5,7 +5,17 @@ El programa corre un modelo RAG que responde preguntas sobre cigarros importados
 El modelo corre en local, para eso se requiere tener Ollama instalado con nomic-embed-text (modelo de embeddings) y gemma4:12b (modelo generador)
 
 En el seteo del RAG se optó por TOP_K=20, CHUNK_SIZE = 1200 
-y CHUNK_OVERLAP = 250. Esto significa que el modelo elige los 20 mejores chuncks de 1200 caracteres y estos a su vez tiene un solapamiento de 250 para no perder contexto. Esta elección permite tener respuestas con mayor contexto dado la limitación de num_ctx= 16384, que son los tokens de contextos de Ollama, dado que corremos en memoria.
+y CHUNK_OVERLAP = 250. Esto significa que el modelo elige los 20 mejores chuncks de 1200 caracteres y estos a su vez tiene un solapamiento de 250 para no perder contexto. Esta elección permite tener respuestas con mayor contexto dado la limitación de num_ctx= 16384, que son los tokens de contexto de Ollama, dado que corremos en memoria.
+
+El pipeline es el siguiente:
+
+El programa primero extrae los chunks de los pdf y crea los embedding usando nomic-embed-text. Luego guarda los embedding en una base vectorial de Chroma en local. 
+
+Luego al hacerle una pregunta el modelo busca en la base vecotrial los 20 chunks con mayor similitud semantica a nuestra pregunta y llama al LLM de ollama Gemma4:12b. El modelo tiene un prompt oculto que lo limita a responder utilizando solamente la información del contexto: "Respondé la pregunta usando SOLO la información del contexto. Desarrollá la respuesta: explicá el razonamiento y mencioná todos los datos relevantes que encuentres en el contexto, no solo el dato mínimo. Si el contexto no alcanza para una parte, aclaralo para esa parte y respondé igual lo que sí puedas. Cada fragmento del contexto viene precedido por su origen entre corchetes, con el nombre del PDF y el número de página. Citá las referencias una sola vez al final de la respuesta. No cites páginas que no aparezcan en el contexto."
+
+Para citar se hace uso de la metadata de los archivos pdf. Se utiliza la metadata para evitar que el LLM alucine e invente paginas o nombres inexistentes de los archivos.
+
+Despues de evaluar los chunks, el LLM genera una respuesta.
 
 
 ## Pregunta 1: cuanto cuesta un francisco de miranda azul robusto?
