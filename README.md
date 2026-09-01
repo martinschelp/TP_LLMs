@@ -10,6 +10,8 @@ y CHUNK_OVERLAP = 250. Esto significa que el modelo elige los 20 mejores chuncks
 
 ## Pregunta 1: cuanto cuesta un francisco de miranda azul robusto?
 
+### RAG
+
 cuanto cuesta un francisco de miranda azul robusto?
 
 === Pregunta: cuanto cuesta un francisco de miranda azul robusto? ===
